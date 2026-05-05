@@ -27,7 +27,7 @@ export const Sidebar: React.FC = () => {
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   const filteredItems = navItems.filter(
