@@ -56,6 +56,8 @@ api.interceptors.response.use(
       // Don't refresh for demo tokens
       const token = localStorage.getItem('auth_token');
       if (token?.startsWith('demo-token-')) {
+        // For demo tokens, clear auth and redirect to login
+        handleLogout();
         return Promise.reject(error);
       }
 
@@ -89,6 +91,8 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
+        // Token refresh failed - logout user
+        handleLogout();
         return Promise.reject(refreshError);
       }
     }
@@ -96,5 +100,17 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Handle logout - clear auth data and redirect
+ */
+const handleLogout = () => {
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_user');
+  // Redirect to login if not already there
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login?expired=true';
+  }
+};
 
 export default api;

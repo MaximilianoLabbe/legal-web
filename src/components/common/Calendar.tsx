@@ -12,9 +12,10 @@ interface Meeting {
 
 interface CalendarProps {
   meetings?: Meeting[];
+  onDateClick?: (date: Date) => void;
 }
 
-export const Calendar: React.FC<CalendarProps> = ({ meetings = [] }) => {
+export const Calendar: React.FC<CalendarProps> = ({ meetings = [], onDateClick }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const getDaysInMonth = (date: Date) => {
@@ -117,17 +118,24 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings = [] }) => {
       <div className="grid grid-cols-7 gap-2">
         {days.map((day, index) => {
           const dayMeetings = getMeetingsForDay(day);
+          const dayDate = day ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day) : null;
+          
           return (
             <div
               key={index}
-              className={`min-h-24 p-2 rounded-lg border transition-colors ${
+              onClick={() => {
+                if (day && dayDate && onDateClick) {
+                  onDateClick(dayDate);
+                }
+              }}
+              className={`min-h-24 p-2 rounded-lg border transition-colors cursor-pointer ${
                 day === null
-                  ? 'bg-gray-50 border-transparent'
+                  ? 'bg-gray-50 border-transparent cursor-default'
                   : day === new Date().getDate() &&
                     currentDate.getMonth() === new Date().getMonth() &&
                     currentDate.getFullYear() === new Date().getFullYear()
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-white border-gray-100 hover:border-gray-200'
+                  ? 'bg-blue-50 border-blue-200 hover:border-blue-300'
+                  : 'bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
               {day && (

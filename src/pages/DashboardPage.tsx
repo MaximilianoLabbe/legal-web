@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout';
 import { Calendar } from '../components/common';
+import { TaskModalForm } from '../components/common/TaskModalForm';
 import { Card, Badge, Alert } from '../components/ui';
 import { useClientStore } from '../store/clientStore';
 import { useCaseStore } from '../store/caseStore';
 import { useTaskStore } from '../store/taskStore';
+import { useUserStore } from '../store/index';
 import { useAuthStore } from '../store/authStore';
 import { FiPlus, FiUsers, FiFileText, FiCalendar } from 'react-icons/fi';
 import type { Client, Case } from '../types';
@@ -24,8 +26,11 @@ export const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
   const { clients, fetchClients } = useClientStore();
   const { cases, fetchCases } = useCaseStore();
-  const { myTasks, fetchMyTasks } = useTaskStore();
+  const { myTasks, fetchMyTasks, createTask } = useTaskStore();
+  const { users, fetchUsers } = useUserStore();
   const [meetings] = useState<Meeting[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -46,6 +51,9 @@ export const DashboardPage: React.FC = () => {
 
         // Load user's tasks
         await fetchMyTasks();
+        
+        // Load users for task assignment
+        await fetchUsers();
       } catch (err) {
         console.error('Error loading dashboard data:', err);
       }
@@ -85,6 +93,25 @@ export const DashboardPage: React.FC = () => {
   const handleNavigateToCases = () => navigate('/cases');
   const handleCreateClient = () => navigate('/clients/new');
   const handleCreateCase = () => navigate('/cases/new');
+
+  const handleDateClick = (date: Date) => {
+    setSelectedDate(date);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedDate(null);
+  };
+
+  const handleCreateTaskFromCalendar = async (data: any) => {
+    try {
+      await createTask(data);
+      handleCloseModal();
+    } catch (err) {
+      console.error('Error creating task:', err);
+    }
+  };
 
   return (
     <div>
@@ -291,7 +318,13 @@ export const DashboardPage: React.FC = () => {
 
           {user?.role !== 'admin' && (
             <div className="lg:col-span-1">
-              <Calendar meetings={allMeetings} />
+              <Card className="cursor-pointer" onClick={() => {
+                // Allow clicking on the calendar but not interfere with existing functionality
+              }}>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Calendar meetings={allMeetings} onDateClick={handleDateClick} />
+                </div>
+              </Card>
             </div>
           )}
         </div>
@@ -342,6 +375,17 @@ export const DashboardPage: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Task Modal */}
+      <TaskModalForm
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleCreateTaskFromCalendar}
+        users={users}
+        cases={cases}
+        initialDate={selectedDate}
+        title="Nueva Tarea"
+      />
     </div>
   );
 };
