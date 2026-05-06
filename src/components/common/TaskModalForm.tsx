@@ -11,6 +11,7 @@ interface TaskModalFormProps {
   users: any[];
   cases?: Case[];
   initialData?: Task | null;
+  initialDate?: Date | null;
   title?: string;
 }
 
@@ -28,6 +29,7 @@ export const TaskModalForm: React.FC<TaskModalFormProps> = ({
   users = [],
   cases = [],
   initialData,
+  initialDate,
   title = 'Nueva Tarea',
 }) => {
   const [formData, setFormData] = useState({
@@ -57,6 +59,18 @@ export const TaskModalForm: React.FC<TaskModalFormProps> = ({
         fecha_vencimiento: fecha,
         hora: time,
       });
+    } else if (initialDate) {
+      // Si se proporciona una fecha inicial (ej: desde el calendario)
+      const fecha = initialDate.toISOString().split('T')[0];
+      setFormData({
+        titulo: '',
+        descripcion: '',
+        prioridad: 'medium',
+        assigned_to_id: '',
+        case_id: caseId || '',
+        fecha_vencimiento: fecha,
+        hora: '09:00',
+      });
     } else {
       setFormData({
         titulo: '',
@@ -68,7 +82,7 @@ export const TaskModalForm: React.FC<TaskModalFormProps> = ({
         hora: '09:00',
       });
     }
-  }, [initialData, isOpen, caseId]);
+  }, [initialData, initialDate, isOpen, caseId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -193,14 +193,14 @@ export const archiveService = {
 
   /**
    * Descargar un documento
-   * @param documentId - ID del documento
+   * @param fileId - ID del archivo (fileId en el backend)
    * @param fileName - Nombre del archivo (nombre_original de la BD)
    * @param tipoArchivo - Tipo de archivo del backend (opcional)
    */
-  downloadDocument: async (documentId: string, fileName: string, tipoArchivo?: string): Promise<void> => {
+  downloadDocument: async (fileId: string, fileName: string, tipoArchivo?: string): Promise<void> => {
     try {
       const response = await api.get(
-        `/archivos/${documentId}/descargar`,
+        `/archivos/${fileId}/descargar`,
         {
           responseType: 'blob',
         }
@@ -210,7 +210,7 @@ export const archiveService = {
       const mimeType = getMimeType(fileName, tipoArchivo);
       
       // Usar el nombre_original si está disponible (ya tiene la extensión correcta)
-      let fullFileName = fileName || `documento_${documentId}`;
+      let fullFileName = fileName || `documento_${fileId}`;
       
       // Si el nombre ya tiene extensión, usarlo tal cual
       if (fullFileName.includes('.')) {
@@ -234,28 +234,34 @@ export const archiveService = {
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      throw error;
+      console.error(`Error al descargar archivo ${fileId}:`, error);
+      throw new Error(`No se pudo descargar el archivo. Por favor, intenta de nuevo.`);
     }
   },
 
   /**
    * Eliminar un documento
-   * @param documentId - ID del documento
+   * @param fileId - ID del archivo (fileId en el backend)
    */
-  deleteDocument: async (documentId: string): Promise<void> => {
-    await api.delete(`/archivos/${documentId}`);
+  deleteDocument: async (fileId: string): Promise<void> => {
+    try {
+      await api.delete(`/archivos/${fileId}`);
+    } catch (error) {
+      console.error(`Error al eliminar archivo ${fileId}:`, error);
+      throw new Error(`No se pudo eliminar el archivo. Por favor, intenta de nuevo.`);
+    }
   },
 
   /**
    * Visualizar un documento en nueva pestaña con tipo MIME correcto
-   * @param documentId - ID del documento
+   * @param fileId - ID del archivo (fileId en el backend)
    * @param fileName - Nombre del archivo (para identificar el tipo, opcional)
    * @param tipoArchivo - Tipo de archivo del backend (opcional)
    */
-  viewDocument: async (documentId: string, fileName?: string, tipoArchivo?: string): Promise<void> => {
+  viewDocument: async (fileId: string, fileName?: string, tipoArchivo?: string): Promise<void> => {
     try {
       const response = await api.get(
-        `/archivos/${documentId}/descargar`,
+        `/archivos/${fileId}/descargar`,
         {
           responseType: 'blob',
         }
@@ -278,7 +284,8 @@ export const archiveService = {
         }, 60000); // Limpiar después de 1 minuto
       }
     } catch (error) {
-      throw error;
+      console.error(`Error al visualizar archivo ${fileId}:`, error);
+      throw new Error(`No se pudo visualizar el archivo. Por favor, intenta de nuevo.`);
     }
   },
 };

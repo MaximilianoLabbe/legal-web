@@ -20,6 +20,7 @@ export const TasksPage: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     loadData();
@@ -78,12 +79,20 @@ export const TasksPage: React.FC = () => {
 
   const handleEditClick = (task: Task) => {
     setEditingTask(task);
+    setSelectedDate(null);
+    setIsModalOpen(true);
+  };
+
+  const handleDateClick = (date: Date) => {
+    setEditingTask(null);
+    setSelectedDate(date);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingTask(null);
+    setSelectedDate(null);
   };
 
   // Filter tasks
@@ -325,6 +334,7 @@ export const TasksPage: React.FC = () => {
         {view === 'calendar' && (
           <TasksCalendar
             tasks={filteredTasks}
+            onDateClick={handleDateClick}
           />
         )}
       </div>
@@ -337,6 +347,7 @@ export const TasksPage: React.FC = () => {
         users={users}
         cases={cases}
         initialData={editingTask}
+        initialDate={selectedDate}
         title={editingTask ? 'Editar Tarea' : 'Nueva Tarea'}
       />
     </div>
