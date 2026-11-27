@@ -6,6 +6,7 @@ import type {
   ClientContract,
   ClientContractStatus,
   CreateClientContractInput,
+  PaymentMethod,
   UpdateClientContractInput,
 } from '../../types';
 
@@ -14,12 +15,21 @@ interface InstallmentDraft {
   dueDate: string;
 }
 
+interface InitialPaymentInput {
+  paid_at: string;
+  payment_method: PaymentMethod;
+  payment_reference: string;
+}
+
 interface ClientContractFormModalProps {
   clients: Client[];
   contract: ClientContract | null;
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (input: CreateClientContractInput) => Promise<void>;
+  onCreate: (
+    input: CreateClientContractInput,
+    initialPayment: InitialPaymentInput | null
+  ) => Promise<void>;
   onUpdate: (id: string, input: UpdateClientContractInput) => Promise<void>;
 }
 
@@ -30,6 +40,26 @@ const today = () => {
 };
 
 const emptyInstallment = (): InstallmentDraft => ({ amount: '', dueDate: '' });
+
+const formatCurrency = (amount: number) =>
+  new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: 0,
+  }).format(amount);
+
+const nextDate = (value: string) => {
+  if (!value) return '';
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+};
+
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  transfer: 'Transferencia',
+  cash: 'Efectivo',
+  card: 'Tarjeta',
+  other: 'Otro',
+};
 
 export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = ({
   clients,
@@ -45,6 +75,14 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
   const [signedAt, setSignedAt] = useState(contract?.signed_at?.slice(0, 10) ?? today());
   const [totalAmount, setTotalAmount] = useState(contract ? String(contract.total_amount) : '');
   const [status, setStatus] = useState<ClientContractStatus>(contract?.status ?? 'active');
+  const [hasInitialPayment, setHasInitialPayment] = useState(false);
+  const [initialPaymentAmount, setInitialPaymentAmount] = useState('');
+  const [initialPaymentTiming, setInitialPaymentTiming] = useState<'at-signing' | 'after-signing'>(
+    'at-signing'
+  );
+  const [initialPaymentDueDate, setInitialPaymentDueDate] = useState('');
+  const [initialPaymentMethod, setInitialPaymentMethod] = useState<PaymentMethod>('transfer');
+  const [initialPaymentReference, setInitialPaymentReference] = useState('');
   const [installments, setInstallments] = useState<InstallmentDraft[]>(
     contract?.installments.map((installment) => ({
       amount: String(installment.amount),
@@ -53,6 +91,18 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
   );
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const selectedClient = clients.find((client) => client.id === clientId);
+  const parsedTotal = Number(totalAmount);
+  const parsedInitialAmount = hasInitialPayment ? Number(initialPaymentAmount) : 0;
+  const totalIsValid = Number.isSafeInteger(parsedTotal) && parsedTotal > 0;
+  const initialCoversTotal =
+    hasInitialPayment &&
+    totalIsValid &&
+    Number.isSafeInteger(parsedInitialAmount) &&
+    parsedInitialAmount === parsedTotal;
+  const remainingBalance = totalIsValid
+    ? Math.max(parsedTotal - (Number.isSafeInteger(parsedInitialAmount) ? parsedInitialAmount : 0), 0)
+    : null;
 
   const updateInstallment = (index: number, patch: Partial<InstallmentDraft>) => {
     setInstallments((current) =>
@@ -80,8 +130,10 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
           status,
         });
       } else {
-        const total = Number(totalAmount);
-        const validInstallments = installments.map((installment) => ({
+        const total = parsedTotal;
+        const initialAmount = parsedInitialAmount;
+        const regularInstallments = initialCoversTotal ? [] : installments;
+        const validInstallments = regularInstallments.map((installment) => ({
           amount: Number(installment.amount),
           due_date: installment.dueDate,
         }));
@@ -99,20 +151,66 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
           return;
         }
         if (
+          hasInitialPayment &&
+          (!Number.isSafeInteger(initialAmount) || initialAmount <= 0 || initialAmount > total)
+        ) {
+          setError('El pago inicial debe ser un monto entero mayor que cero y no superar el total.');
+          return;
+        }
+        if (
+          hasInitialPayment &&
+          initialPaymentTiming === 'after-signing' &&
+          (!initialPaymentDueDate || initialPaymentDueDate <= signedAt)
+        ) {
+          setError('La fecha del pago inicial posterior debe ser después de la fecha de firma.');
+          return;
+        }
+        if (
+          regularInstallments.length === 0 &&
+          !(hasInitialPayment && initialAmount === total)
+        ) {
+          setError('Agrega al menos una cuota para cubrir el saldo del contrato.');
+          return;
+        }
+        if (
           validInstallments.some(
             (installment) =>
               !Number.isSafeInteger(installment.amount) ||
               installment.amount <= 0 ||
-              !installment.due_date
+              !installment.due_date ||
+              installment.due_date < signedAt
           )
         ) {
-          setError('Cada cuota debe tener un monto entero y una fecha de vencimiento.');
+          setError('Cada cuota debe tener un monto entero y una fecha igual o posterior a la firma.');
           return;
         }
-        if (validInstallments.reduce((sum, installment) => sum + installment.amount, 0) !== total) {
-          setError('La suma de las cuotas debe ser igual al monto total del contrato.');
+        const scheduledTotal = validInstallments.reduce(
+          (sum, installment) => sum + installment.amount,
+          0
+        );
+        if (!Number.isSafeInteger(scheduledTotal + initialAmount) || scheduledTotal + initialAmount !== total) {
+          setError('El pago inicial más la suma de las cuotas debe ser igual al monto total del contrato.');
           return;
         }
+
+        const contractInstallments = [
+          ...(hasInitialPayment
+            ? [
+                {
+                  number: 1,
+                  amount: initialAmount,
+                  due_date:
+                    initialPaymentTiming === 'at-signing'
+                      ? signedAt
+                      : initialPaymentDueDate,
+                },
+              ]
+            : []),
+          ...validInstallments.map((installment, index) => ({
+            ...installment,
+            number: index + (hasInitialPayment ? 2 : 1),
+          })),
+        ];
 
         await onCreate({
           client_id: clientId,
@@ -121,11 +219,14 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
           signed_at: signedAt,
           total_amount: total,
           currency: 'CLP',
-          installments: validInstallments.map((installment, index) => ({
-            ...installment,
-            number: index + 1,
-          })),
-        });
+          installments: contractInstallments,
+        }, hasInitialPayment && initialPaymentTiming === 'at-signing'
+          ? {
+              paid_at: signedAt,
+              payment_method: initialPaymentMethod,
+              payment_reference: initialPaymentReference.trim(),
+            }
+          : null);
       }
 
       onClose();
@@ -195,6 +296,30 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
                   </select>
                 </div>
 
+                {selectedClient && (
+                  <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                    <h3 className="mb-3 text-sm font-semibold text-gray-800">Datos del cliente</h3>
+                    <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-gray-500">Nombre</dt>
+                        <dd className="font-medium text-gray-900">{selectedClient.nombre}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">RUT</dt>
+                        <dd className="font-medium text-gray-900">{selectedClient.rut}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Teléfono</dt>
+                        <dd className="font-medium text-gray-900">{selectedClient.telefono}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Correo electrónico</dt>
+                        <dd className="font-medium text-gray-900">{selectedClient.email}</dd>
+                      </div>
+                    </dl>
+                  </section>
+                )}
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
                     label="Fecha del contrato"
@@ -259,56 +384,192 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
                 </select>
               </div>
             ) : (
-              <section className="space-y-3 rounded-xl border border-gray-200 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">Plan de cuotas</h3>
-                    <p className="text-sm text-gray-500">La suma de las cuotas debe coincidir con el total.</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setInstallments((current) => [...current, emptyInstallment()])}
-                    disabled={isSaving}
-                  >
-                    Agregar cuota
-                  </Button>
-                </div>
-                {installments.map((installment, index) => (
-                  <div key={index} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
-                    <Input
-                      label={`Cuota ${index + 1} · monto CLP`}
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={installment.amount}
-                      onChange={(event) => updateInstallment(index, { amount: event.target.value })}
+              <>
+                <section className="space-y-4 rounded-xl border border-gray-200 p-4">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={hasInitialPayment}
+                      onChange={(event) => {
+                        const enabled = event.target.checked;
+                        setHasInitialPayment(enabled);
+                        if (!enabled && installments.length === 0) {
+                          setInstallments([emptyInstallment()]);
+                        }
+                      }}
                       disabled={isSaving}
-                      required
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
-                    <Input
-                      label="Fecha de vencimiento"
-                      type="date"
-                      value={installment.dueDate}
-                      onChange={(event) => updateInstallment(index, { dueDate: event.target.value })}
-                      disabled={isSaving}
-                      required
-                    />
-                    {installments.length > 1 && (
+                    <span>
+                      <span className="block font-semibold text-gray-900">Incluir pago inicial</span>
+                      <span className="text-sm text-gray-500">
+                        El monto se descuenta del total y se registra como pagado o pendiente.
+                      </span>
+                    </span>
+                  </label>
+
+                  {hasInitialPayment && (
+                    <div className="space-y-4 border-t border-gray-200 pt-4">
+                      <Input
+                        label="Monto del pago inicial (CLP)"
+                        type="number"
+                        min="1"
+                        max={totalAmount || undefined}
+                        step="1"
+                        value={initialPaymentAmount}
+                        onChange={(event) => setInitialPaymentAmount(event.target.value)}
+                        disabled={isSaving}
+                        required
+                      />
+
+                      <fieldset className="space-y-2">
+                        <legend className="mb-2 text-sm font-medium text-gray-700">
+                          ¿Cuándo se recibe?
+                        </legend>
+                        <label className="flex items-start gap-2 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name="initial-payment-timing"
+                            value="at-signing"
+                            checked={initialPaymentTiming === 'at-signing'}
+                            onChange={() => setInitialPaymentTiming('at-signing')}
+                            disabled={isSaving}
+                            className="mt-1"
+                          />
+                          <span>
+                            Al firmar · se registrará como pagado el {signedAt || 'día de firma'}.
+                          </span>
+                        </label>
+                        <label className="flex items-start gap-2 text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            name="initial-payment-timing"
+                            value="after-signing"
+                            checked={initialPaymentTiming === 'after-signing'}
+                            onChange={() => setInitialPaymentTiming('after-signing')}
+                            disabled={isSaving}
+                            className="mt-1"
+                          />
+                          <span>Después de la firma · quedará pendiente hasta registrar el pago.</span>
+                        </label>
+                      </fieldset>
+
+                      {initialPaymentTiming === 'after-signing' ? (
+                        <Input
+                          label="Fecha pactada para el pago inicial"
+                          type="date"
+                          min={nextDate(signedAt)}
+                          value={initialPaymentDueDate}
+                          onChange={(event) => setInitialPaymentDueDate(event.target.value)}
+                          disabled={isSaving}
+                          required
+                        />
+                      ) : (
+                        <>
+                          <div>
+                            <label
+                              htmlFor="initial-payment-method"
+                              className="mb-2 block text-sm font-medium text-gray-700"
+                            >
+                              Medio de pago
+                            </label>
+                            <select
+                              id="initial-payment-method"
+                              value={initialPaymentMethod}
+                              onChange={(event) =>
+                                setInitialPaymentMethod(event.target.value as PaymentMethod)
+                              }
+                              disabled={isSaving}
+                              className="w-full rounded-xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <Input
+                            label="Referencia o comprobante (opcional)"
+                            value={initialPaymentReference}
+                            onChange={(event) => setInitialPaymentReference(event.target.value)}
+                            placeholder="N.º de operación"
+                            disabled={isSaving}
+                          />
+                        </>
+                      )}
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-3 rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Cuotas pactadas</h3>
+                      <p className="text-sm text-gray-500">
+                        {remainingBalance !== null
+                          ? `Saldo a distribuir: ${formatCurrency(remainingBalance)}`
+                          : 'Ingresa el monto total para calcular el saldo.'}
+                      </p>
+                    </div>
+                    {!(hasInitialPayment && initialCoversTotal) && (
                       <Button
                         type="button"
-                        variant="ghost"
-                        onClick={() => setInstallments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setInstallments((current) => [...current, emptyInstallment()])}
                         disabled={isSaving}
-                        aria-label={`Eliminar cuota ${index + 1}`}
                       >
-                        Quitar
+                        Agregar cuota
                       </Button>
                     )}
                   </div>
-                ))}
-              </section>
+                  {hasInitialPayment && initialCoversTotal ? (
+                    <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
+                      El pago inicial cubre el total; no se requieren cuotas adicionales.
+                    </p>
+                  ) : (
+                    installments.map((installment, index) => (
+                      <div key={index} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                        <Input
+                          label={`Cuota ${index + (hasInitialPayment ? 2 : 1)} · monto CLP`}
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={installment.amount}
+                          onChange={(event) => updateInstallment(index, { amount: event.target.value })}
+                          disabled={isSaving}
+                          required
+                        />
+                        <Input
+                          label="Fecha de pago"
+                          type="date"
+                          min={signedAt}
+                          value={installment.dueDate}
+                          onChange={(event) => updateInstallment(index, { dueDate: event.target.value })}
+                          disabled={isSaving}
+                          required
+                        />
+                        {(installments.length > 1 || hasInitialPayment) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() =>
+                              setInstallments((current) =>
+                                current.filter((_, itemIndex) => itemIndex !== index)
+                              )
+                            }
+                            disabled={isSaving}
+                            aria-label={`Eliminar cuota ${index + (hasInitialPayment ? 2 : 1)}`}
+                          >
+                            Quitar
+                          </Button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </section>
+              </>
             )}
 
             <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">

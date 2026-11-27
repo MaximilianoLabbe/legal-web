@@ -11,6 +11,7 @@ import type {
   ContractInstallment,
   CreateClientContractInput,
   PaymentMethod,
+  RecordInstallmentPaymentInput,
   UpdateClientContractInput,
 } from '../types';
 import { FiChevronDown, FiChevronUp, FiPlus } from 'react-icons/fi';
@@ -72,6 +73,7 @@ export const AdminContractsPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [noticeType, setNoticeType] = useState<'success' | 'warning'>('success');
 
   const fetchData = useCallback(() => Promise.all([
     clientService.getAllClientsStrict(),
@@ -138,14 +140,52 @@ export const AdminContractsPage: React.FC = () => {
     .flatMap((contract) => contract.installments)
     .filter(isOverdue).length;
 
-  const handleCreate = async (input: CreateClientContractInput) => {
-    await contractService.createContract(input);
+  const handleCreate = async (
+    input: CreateClientContractInput,
+    initialPayment: RecordInstallmentPaymentInput | null
+  ) => {
+    const createdContract = await contractService.createContract(input);
+
+    if (initialPayment) {
+      const initialInstallment = createdContract.installments.find(
+        (installment) => installment.number === 1
+      );
+      if (!initialInstallment) {
+        setNoticeType('warning');
+        setNotice(
+          'El contrato se creó, pero no se pudo identificar la cuota del pago inicial. Revisa las cuotas antes de continuar.'
+        );
+        await loadData();
+        return;
+      }
+
+      try {
+        await contractService.recordInstallmentPayment(
+          createdContract.id,
+          initialInstallment.id,
+          initialPayment
+        );
+      } catch (err: unknown) {
+        setNoticeType('warning');
+        setNotice(
+          `El contrato se creó, pero no se pudo confirmar el registro del pago inicial. Revisa la cuota 1 antes de reintentar. ${getErrorMessage(
+            err,
+            'Error desconocido.'
+          )}`
+        );
+        await loadData();
+        return;
+      }
+    }
+
+    setNoticeType('success');
     setNotice('Contrato creado correctamente.');
     await loadData();
   };
 
   const handleUpdate = async (id: string, input: UpdateClientContractInput) => {
     await contractService.updateContract(id, input);
+    setNoticeType('success');
     setNotice('Contrato actualizado correctamente.');
     await loadData();
   };
@@ -161,6 +201,7 @@ export const AdminContractsPage: React.FC = () => {
       paymentTarget.installment.id,
       payment
     );
+    setNoticeType('success');
     setNotice(`Pago de la cuota ${paymentTarget.installment.number} registrado.`);
     await loadData();
   };
@@ -204,8 +245,8 @@ export const AdminContractsPage: React.FC = () => {
       <div className="space-y-6 p-6">
         {notice && (
           <Alert
-            type="success"
-            title="Actualización exitosa"
+            type={noticeType}
+            title={noticeType === 'success' ? 'Actualización exitosa' : 'Atención: revisar pago inicial'}
             message={notice}
             onClose={() => setNotice(null)}
           />
