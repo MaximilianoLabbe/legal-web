@@ -19,8 +19,8 @@ const navItems = [
   { path: '/clients', icon: FiUsers, label: 'Clientes' },
   { path: '/cases', icon: FiFileText, label: 'Casos' },
   { path: '/tasks', icon: FiCheckSquare, label: 'Tareas' },
-  { path: '/admin/users', icon: FiSettings, label: 'Administración', adminOnly: true },
   { path: '/admin/contracts', icon: FiDollarSign, label: 'Contratos y pagos', adminOnly: true },
+  { path: '/admin/users', icon: FiSettings, label: 'Administración', adminOnly: true },
 ];
 
 export const Sidebar: React.FC = () => {
