@@ -41,7 +41,8 @@ Un contrato pertenece a un cliente y contiene un plan de cuotas en pesos chileno
 }
 ```
 
-Estados de contrato: `active`, `completed`, `cancelled`.  
+Estados de contrato: `active`, `completed`, `cancelled`.
+
 Estados de cuota: `pending`, `paid`. La interfaz determina si una cuota pendiente está vencida a partir de `due_date`.
 
 ## Listar contratos
