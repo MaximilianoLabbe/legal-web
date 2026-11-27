@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Perfil Administrador</title>
+  <desc id="desc">Ilustración del menú y permisos disponibles para el administrador.</desc>
+  <rect width="1200" height="620" rx="24" fill="#eef2f7"/>
+  <rect x="28" y="28" width="1144" height="564" rx="18" fill="#fff" stroke="#d7dee8"/>
+  <rect x="28" y="28" width="246" height="564" rx="18" fill="#1f2937"/>
+  <circle cx="61" cy="67" r="8" fill="#fb7185"/><circle cx="87" cy="67" r="8" fill="#fbbf24"/><circle cx="113" cy="67" r="8" fill="#34d399"/>
+  <text x="50" y="117" fill="#fff" font-size="21" font-family="Arial" font-weight="700">FGN Abogados</text>
+  <rect x="46" y="143" width="210" height="40" rx="9" fill="#374151"/><text x="63" y="169" fill="#fff" font-size="15" font-family="Arial">Panel de control</text>
+  <text x="63" y="218" fill="#d1d5db" font-size="15" font-family="Arial">Clientes</text>
+  <text x="63" y="260" fill="#d1d5db" font-size="15" font-family="Arial">Casos</text>
+  <text x="63" y="302" fill="#d1d5db" font-size="15" font-family="Arial">Tareas</text>
+  <rect x="46" y="322" width="210" height="40" rx="9" fill="#374151"/><text x="63" y="348" fill="#fff" font-size="15" font-family="Arial">Contratos y pagos</text>
+  <rect x="46" y="372" width="210" height="40" rx="9" fill="#374151"/><text x="63" y="398" fill="#fff" font-size="15" font-family="Arial">Administración</text>
+  <text x="51" y="548" fill="#fff" font-size="14" font-family="Arial">Administrador</text>
+  <text x="310" y="91" fill="#111827" font-size="28" font-family="Arial" font-weight="700">Perfil Administrador</text>
+  <text x="310" y="123" fill="#64748b" font-size="16" font-family="Arial">Acceso a la operación general y a la gestión administrativa</text>
+  <rect x="310" y="157" width="385" height="145" rx="14" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="336" y="195" fill="#1e3a8a" font-size="19" font-family="Arial" font-weight="700">Módulos generales</text>
+  <text x="336" y="231" fill="#334155" font-size="16" font-family="Arial">Panel · Clientes · Casos · Tareas</text>
+  <text x="336" y="264" fill="#64748b" font-size="14" font-family="Arial">Consulta y seguimiento de la gestión del equipo</text>
+  <rect x="719" y="157" width="407" height="145" rx="14" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="745" y="195" fill="#166534" font-size="19" font-family="Arial" font-weight="700">Módulos exclusivos</text>
+  <text x="745" y="231" fill="#334155" font-size="16" font-family="Arial">Contratos y pagos</text>
+  <text x="745" y="261" fill="#334155" font-size="16" font-family="Arial">Administración de usuarios</text>
+  <rect x="310" y="326" width="816" height="206" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="338" y="369" fill="#111827" font-size="19" font-family="Arial" font-weight="700">Responsabilidades principales</text>
+  <circle cx="346" cy="408" r="5" fill="#2563eb"/><text x="364" y="414" fill="#334155" font-size="16" font-family="Arial">Gestionar cuentas y asignar perfiles de acceso.</text>
+  <circle cx="346" cy="449" r="5" fill="#2563eb"/><text x="364" y="455" fill="#334155" font-size="16" font-family="Arial">Crear contratos, cuotas y registrar pagos.</text>
+  <circle cx="346" cy="490" r="5" fill="#2563eb"/><text x="364" y="496" fill="#334155" font-size="16" font-family="Arial">Supervisar clientes, casos y tareas del sistema.</text>
+</svg>

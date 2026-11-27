@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">Panel de control</title>
+  <desc id="desc">Vista ilustrativa del panel de control con resumen, accesos y agenda.</desc>
+  <rect width="1200" height="620" rx="24" fill="#eef2f7"/><rect x="28" y="28" width="1144" height="564" rx="18" fill="#fff" stroke="#d7dee8"/>
+  <rect x="28" y="28" width="220" height="564" rx="18" fill="#1f2937"/><text x="49" y="82" fill="#fff" font-size="19" font-family="Arial" font-weight="700">FGN Abogados</text>
+  <rect x="44" y="111" width="188" height="38" rx="8" fill="#374151"/><text x="59" y="136" fill="#fff" font-size="14" font-family="Arial">Panel de control</text>
+  <text x="59" y="184" fill="#d1d5db" font-size="14" font-family="Arial">Clientes</text><text x="59" y="224" fill="#d1d5db" font-size="14" font-family="Arial">Casos</text><text x="59" y="264" fill="#d1d5db" font-size="14" font-family="Arial">Tareas</text>
+  <text x="280" y="82" fill="#111827" font-size="26" font-family="Arial" font-weight="700">Panel de control</text><text x="280" y="110" fill="#64748b" font-size="14" font-family="Arial">Resumen general de actividad</text>
+  <rect x="280" y="136" width="190" height="104" rx="12" fill="#eff6ff"/><text x="300" y="169" fill="#475569" font-size="14" font-family="Arial">Clientes</text><text x="300" y="211" fill="#1d4ed8" font-size="32" font-family="Arial" font-weight="700">24</text>
+  <rect x="488" y="136" width="190" height="104" rx="12" fill="#f0fdf4"/><text x="508" y="169" fill="#475569" font-size="14" font-family="Arial">Casos activos</text><text x="508" y="211" fill="#15803d" font-size="32" font-family="Arial" font-weight="700">18</text>
+  <rect x="696" y="136" width="190" height="104" rx="12" fill="#fff7ed"/><text x="716" y="169" fill="#475569" font-size="14" font-family="Arial">Casos cerrados</text><text x="716" y="211" fill="#c2410c" font-size="32" font-family="Arial" font-weight="700">9</text>
+  <rect x="904" y="136" width="230" height="104" rx="12" fill="#f5f3ff"/><text x="924" y="169" fill="#475569" font-size="14" font-family="Arial">Tareas pendientes</text><text x="924" y="211" fill="#6d28d9" font-size="32" font-family="Arial" font-weight="700">5</text>
+  <rect x="280" y="263" width="520" height="264" rx="12" fill="#fff" stroke="#e2e8f0"/><text x="302" y="298" fill="#111827" font-size="18" font-family="Arial" font-weight="700">Actividad reciente</text>
+  <text x="302" y="345" fill="#334155" font-size="15" font-family="Arial">Cliente de ejemplo</text><text x="640" y="345" fill="#64748b" font-size="13" font-family="Arial">Caso actualizado</text><path d="M302 363h470" stroke="#e2e8f0"/>
+  <text x="302" y="397" fill="#334155" font-size="15" font-family="Arial">Caso de referencia</text><text x="640" y="397" fill="#64748b" font-size="13" font-family="Arial">Nuevo asunto</text><path d="M302 415h470" stroke="#e2e8f0"/>
+  <rect x="819" y="263" width="315" height="264" rx="12" fill="#f8fafc" stroke="#e2e8f0"/><text x="841" y="298" fill="#111827" font-size="18" font-family="Arial" font-weight="700">Accesos rápidos</text>
+  <rect x="841" y="322" width="270" height="48" rx="8" fill="#2563eb"/><text x="910" y="352" fill="#fff" font-size="14" font-family="Arial">Crear cliente</text>
+  <rect x="841" y="386" width="270" height="48" rx="8" fill="#fff" stroke="#cbd5e1"/><text x="910" y="416" fill="#334155" font-size="14" font-family="Arial">Crear caso</text>
+  <text x="841" y="475" fill="#64748b" font-size="13" font-family="Arial">El abogado también dispone de</text><text x="841" y="495" fill="#64748b" font-size="13" font-family="Arial">calendario y tareas pendientes.</text>
+</svg>
