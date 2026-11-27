@@ -41,6 +41,8 @@ const formatCurrency = (amount: number) =>
     maximumFractionDigits: 0,
   }).format(amount);
 
+const MAX_INSTALLMENTS = 60;
+
 const nextDate = (value: string) => {
   if (!value) return '';
   const [year, month, day] = value.split('-').map(Number);
@@ -132,15 +134,14 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
   const remainingBalance = totalIsValid
     ? Math.max(parsedTotal - (Number.isSafeInteger(parsedInitialAmount) ? parsedInitialAmount : 0), 0)
     : null;
-  const installmentCountMax =
-    remainingBalance === null ? undefined : Math.max(1, remainingBalance);
+  const installmentCountMax = MAX_INSTALLMENTS;
   const canPreviewInstallments =
     remainingBalance !== null &&
     remainingBalance > 0 &&
     Number.isSafeInteger(parsedInstallmentCount) &&
     parsedInstallmentCount > 0 &&
-    installmentCountMax !== undefined &&
     parsedInstallmentCount <= installmentCountMax &&
+    parsedInstallmentCount <= remainingBalance &&
     Boolean(firstInstallmentDate) &&
     firstInstallmentDate > signedAt;
   const calculatedInstallments = canPreviewInstallments
@@ -199,9 +200,10 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
         if (scheduledBalance > 0) {
           if (
             !Number.isSafeInteger(parsedInstallmentCount) ||
-            parsedInstallmentCount < 1
+            parsedInstallmentCount < 1 ||
+            parsedInstallmentCount > MAX_INSTALLMENTS
           ) {
-            setError('El número de cuotas debe ser un entero mayor que cero.');
+            setError(`El número de cuotas debe estar entre 1 y ${MAX_INSTALLMENTS}.`);
             return;
           }
           if (parsedInstallmentCount > scheduledBalance) {
@@ -555,17 +557,32 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
                   ) : (
                     <>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <Input
-                          label={`Número de cuotas mensuales${hasInitialPayment ? ' (sin incluir el pago inicial)' : ''}`}
-                          type="number"
-                          min="1"
-                          max={installmentCountMax}
-                          step="1"
-                          value={installmentCount}
-                          onChange={(event) => setInstallmentCount(event.target.value)}
-                          disabled={isSaving}
-                          required
-                        />
+                        <div>
+                          <label
+                            htmlFor="contract-installment-count"
+                            className="mb-2 block text-sm font-medium text-gray-700"
+                          >
+                            Número de cuotas mensuales
+                            {hasInitialPayment ? ' (sin incluir el pago inicial)' : ''}
+                          </label>
+                          <select
+                            id="contract-installment-count"
+                            value={installmentCount}
+                            onChange={(event) => setInstallmentCount(event.target.value)}
+                            disabled={isSaving}
+                            required
+                            className="w-full rounded-xl border border-gray-300 px-4 py-2.5 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {Array.from({ length: installmentCountMax }, (_value, index) => {
+                              const count = index + 1;
+                              return (
+                                <option key={count} value={count}>
+                                  {count}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
                         <Input
                           label="Fecha de la primera cuota"
                           type="date"
@@ -579,7 +596,8 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
                       <p className="text-sm text-gray-500">
                         Las cuotas siguientes vencerán el mismo día de cada mes. Si un mes no tiene ese día,
                         se usará el último día del mes. El saldo se divide automáticamente y cualquier
-                        diferencia de pesos se agrega a la última cuota.
+                        diferencia de pesos se agrega a la última cuota. Puedes elegir hasta {MAX_INSTALLMENTS}{' '}
+                        cuotas mensuales.
                       </p>
                       {calculatedInstallments.length > 0 && (
                         <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-gray-100 p-3">
