@@ -10,11 +10,6 @@ import type {
   UpdateClientContractInput,
 } from '../../types';
 
-interface InstallmentDraft {
-  amount: string;
-  dueDate: string;
-}
-
 interface InitialPaymentInput {
   paid_at: string;
   payment_method: PaymentMethod;
@@ -39,8 +34,6 @@ const today = () => {
   return date.toISOString().slice(0, 10);
 };
 
-const emptyInstallment = (): InstallmentDraft => ({ amount: '', dueDate: '' });
-
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('es-CL', {
     style: 'currency',
@@ -52,6 +45,45 @@ const nextDate = (value: string) => {
   if (!value) return '';
   const [year, month, day] = value.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+};
+
+const monthlyDueDate = (firstDate: string, monthOffset: number) => {
+  const [year, month, day] = firstDate.split('-').map(Number);
+  const monthIndex = year * 12 + month - 1 + monthOffset;
+  const targetYear = Math.floor(monthIndex / 12);
+  const targetMonth = monthIndex % 12;
+  const lastDayOfMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(targetYear, targetMonth, Math.min(day, lastDayOfMonth))
+  ).toISOString().slice(0, 10);
+};
+
+const calculateInstallments = (amount: number, count: number, firstDate: string) => {
+  if (
+    !Number.isSafeInteger(amount) ||
+    !Number.isSafeInteger(count) ||
+    amount <= 0 ||
+    count <= 0 ||
+    count > amount ||
+    !firstDate
+  ) {
+    return [];
+  }
+
+  const installmentAmount = Math.floor(amount / count);
+  const remainder = amount % count;
+  return Array.from({ length: count }, (_value, index) => ({
+    amount: installmentAmount + (index === count - 1 ? remainder : 0),
+    due_date: monthlyDueDate(firstDate, index),
+  }));
+};
+
+const formatDate = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Intl.DateTimeFormat('es-CL', {
+    dateStyle: 'medium',
+    timeZone: 'UTC',
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 };
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -83,17 +115,14 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
   const [initialPaymentDueDate, setInitialPaymentDueDate] = useState('');
   const [initialPaymentMethod, setInitialPaymentMethod] = useState<PaymentMethod>('transfer');
   const [initialPaymentReference, setInitialPaymentReference] = useState('');
-  const [installments, setInstallments] = useState<InstallmentDraft[]>(
-    contract?.installments.map((installment) => ({
-      amount: String(installment.amount),
-      dueDate: installment.due_date.slice(0, 10),
-    })) ?? [emptyInstallment()]
-  );
+  const [installmentCount, setInstallmentCount] = useState('1');
+  const [firstInstallmentDate, setFirstInstallmentDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const selectedClient = clients.find((client) => client.id === clientId);
   const parsedTotal = Number(totalAmount);
   const parsedInitialAmount = hasInitialPayment ? Number(initialPaymentAmount) : 0;
+  const parsedInstallmentCount = Number(installmentCount);
   const totalIsValid = Number.isSafeInteger(parsedTotal) && parsedTotal > 0;
   const initialCoversTotal =
     hasInitialPayment &&
@@ -103,14 +132,20 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
   const remainingBalance = totalIsValid
     ? Math.max(parsedTotal - (Number.isSafeInteger(parsedInitialAmount) ? parsedInitialAmount : 0), 0)
     : null;
-
-  const updateInstallment = (index: number, patch: Partial<InstallmentDraft>) => {
-    setInstallments((current) =>
-      current.map((installment, itemIndex) =>
-        itemIndex === index ? { ...installment, ...patch } : installment
-      )
-    );
-  };
+  const installmentCountMax =
+    remainingBalance === null ? undefined : Math.max(1, remainingBalance);
+  const canPreviewInstallments =
+    remainingBalance !== null &&
+    remainingBalance > 0 &&
+    Number.isSafeInteger(parsedInstallmentCount) &&
+    parsedInstallmentCount > 0 &&
+    installmentCountMax !== undefined &&
+    parsedInstallmentCount <= installmentCountMax &&
+    Boolean(firstInstallmentDate) &&
+    firstInstallmentDate > signedAt;
+  const calculatedInstallments = canPreviewInstallments
+    ? calculateInstallments(remainingBalance, parsedInstallmentCount, firstInstallmentDate)
+    : [];
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -132,11 +167,6 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
       } else {
         const total = parsedTotal;
         const initialAmount = parsedInitialAmount;
-        const regularInstallments = initialCoversTotal ? [] : installments;
-        const validInstallments = regularInstallments.map((installment) => ({
-          amount: Number(installment.amount),
-          due_date: installment.dueDate,
-        }));
 
         if (!clientId) {
           setError('Selecciona un cliente.');
@@ -165,29 +195,38 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
           setError('La fecha del pago inicial posterior debe ser después de la fecha de firma.');
           return;
         }
-        if (
-          regularInstallments.length === 0 &&
-          !(hasInitialPayment && initialAmount === total)
-        ) {
-          setError('Agrega al menos una cuota para cubrir el saldo del contrato.');
+        const scheduledBalance = total - initialAmount;
+        if (scheduledBalance > 0) {
+          if (
+            !Number.isSafeInteger(parsedInstallmentCount) ||
+            parsedInstallmentCount < 1
+          ) {
+            setError('El número de cuotas debe ser un entero mayor que cero.');
+            return;
+          }
+          if (parsedInstallmentCount > scheduledBalance) {
+            setError('El número de cuotas no puede superar el saldo en pesos.');
+            return;
+          }
+          if (!firstInstallmentDate || firstInstallmentDate <= signedAt) {
+            setError('La fecha de la primera cuota debe ser posterior a la fecha de firma.');
+            return;
+          }
+        }
+
+        const validInstallments =
+          scheduledBalance > 0
+            ? calculateInstallments(
+                scheduledBalance,
+                parsedInstallmentCount,
+                firstInstallmentDate
+              )
+            : [];
+        if (scheduledBalance > 0 && validInstallments.length !== parsedInstallmentCount) {
+          setError('No se pudo calcular el plan de cuotas. Revisa el monto, la cantidad y la fecha.');
           return;
         }
-        if (
-          validInstallments.some(
-            (installment) =>
-              !Number.isSafeInteger(installment.amount) ||
-              installment.amount <= 0 ||
-              !installment.due_date ||
-              installment.due_date < signedAt
-          )
-        ) {
-          setError('Cada cuota debe tener un monto entero y una fecha igual o posterior a la firma.');
-          return;
-        }
-        const scheduledTotal = validInstallments.reduce(
-          (sum, installment) => sum + installment.amount,
-          0
-        );
+        const scheduledTotal = validInstallments.reduce((sum, installment) => sum + installment.amount, 0);
         if (!Number.isSafeInteger(scheduledTotal + initialAmount) || scheduledTotal + initialAmount !== total) {
           setError('El pago inicial más la suma de las cuotas debe ser igual al monto total del contrato.');
           return;
@@ -391,11 +430,7 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
                       type="checkbox"
                       checked={hasInitialPayment}
                       onChange={(event) => {
-                        const enabled = event.target.checked;
-                        setHasInitialPayment(enabled);
-                        if (!enabled && installments.length === 0) {
-                          setInstallments([emptyInstallment()]);
-                        }
+                        setHasInitialPayment(event.target.checked);
                       }}
                       disabled={isSaving}
                       className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -512,61 +547,58 @@ export const ClientContractFormModal: React.FC<ClientContractFormModalProps> = (
                           : 'Ingresa el monto total para calcular el saldo.'}
                       </p>
                     </div>
-                    {!(hasInitialPayment && initialCoversTotal) && (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => setInstallments((current) => [...current, emptyInstallment()])}
-                        disabled={isSaving}
-                      >
-                        Agregar cuota
-                      </Button>
-                    )}
                   </div>
                   {hasInitialPayment && initialCoversTotal ? (
                     <p className="rounded-lg bg-green-50 p-3 text-sm text-green-800">
-                      El pago inicial cubre el total; no se requieren cuotas adicionales.
+                      El pago inicial cubre el total; no se requieren cuotas mensuales.
                     </p>
                   ) : (
-                    installments.map((installment, index) => (
-                      <div key={index} className="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2">
                         <Input
-                          label={`Cuota ${index + (hasInitialPayment ? 2 : 1)} · monto CLP`}
+                          label={`Número de cuotas mensuales${hasInitialPayment ? ' (sin incluir el pago inicial)' : ''}`}
                           type="number"
                           min="1"
+                          max={installmentCountMax}
                           step="1"
-                          value={installment.amount}
-                          onChange={(event) => updateInstallment(index, { amount: event.target.value })}
+                          value={installmentCount}
+                          onChange={(event) => setInstallmentCount(event.target.value)}
                           disabled={isSaving}
                           required
                         />
                         <Input
-                          label="Fecha de pago"
+                          label="Fecha de la primera cuota"
                           type="date"
-                          min={signedAt}
-                          value={installment.dueDate}
-                          onChange={(event) => updateInstallment(index, { dueDate: event.target.value })}
+                          min={nextDate(signedAt)}
+                          value={firstInstallmentDate}
+                          onChange={(event) => setFirstInstallmentDate(event.target.value)}
                           disabled={isSaving}
                           required
                         />
-                        {(installments.length > 1 || hasInitialPayment) && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() =>
-                              setInstallments((current) =>
-                                current.filter((_, itemIndex) => itemIndex !== index)
-                              )
-                            }
-                            disabled={isSaving}
-                            aria-label={`Eliminar cuota ${index + (hasInitialPayment ? 2 : 1)}`}
-                          >
-                            Quitar
-                          </Button>
-                        )}
                       </div>
-                    ))
+                      <p className="text-sm text-gray-500">
+                        Las cuotas siguientes vencerán el mismo día de cada mes. Si un mes no tiene ese día,
+                        se usará el último día del mes. El saldo se divide automáticamente y cualquier
+                        diferencia de pesos se agrega a la última cuota.
+                      </p>
+                      {calculatedInstallments.length > 0 && (
+                        <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border border-gray-100 p-3">
+                          {calculatedInstallments.map((installment, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between gap-3 text-sm"
+                            >
+                              <span className="font-medium text-gray-800">
+                                Cuota {index + (hasInitialPayment ? 2 : 1)}
+                              </span>
+                              <span className="text-gray-600">
+                                {formatCurrency(installment.amount)} · {formatDate(installment.due_date)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </section>
               </>
