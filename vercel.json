@@ -9,15 +9,15 @@
   "rewrites": [
     {
       "source": "/forgot-password",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/reset-password",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/reset-password/:token",
-      "destination": "/index.html"
+      "destination": "/"
     },
     {
       "source": "/assets/(.*)",
@@ -25,7 +25,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/"
     }
   ]
 }
