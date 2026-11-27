@@ -18,6 +18,7 @@ export const ROUTES = {
   ADMIN_USERS: '/admin/users',
   ADMIN_USERS_CREATE: '/admin/users/create',
   ADMIN_USERS_EDIT: '/admin/users/:id/edit',
+  ADMIN_CONTRACTS: '/admin/contracts',
 };
 
 export const USER_ROLES = {

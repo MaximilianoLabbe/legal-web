@@ -14,6 +14,7 @@ import { CreateCasePage } from './pages/CreateCasePage';
 import { EditCasePage } from './pages/EditCasePage';
 import { TasksPage } from './pages/TasksPage';
 import { AdminUsersPage } from './pages/AdminUsersPage';
+import { AdminContractsPage } from './pages/AdminContractsPage';
 import { CreateUserPage } from './pages/CreateUserPage';
 import { ProtectedRoute } from './pages/ProtectedRoute';
 import { RoleBasedRoute } from './components/layout/RoleBasedRoute';
@@ -71,6 +72,14 @@ function App() {
             element={
               <RoleBasedRoute requiredRole="admin">
                 <CreateUserPage />
+              </RoleBasedRoute>
+            }
+          />
+          <Route
+            path="/admin/contracts"
+            element={
+              <RoleBasedRoute requiredRole="admin">
+                <AdminContractsPage />
               </RoleBasedRoute>
             }
           />

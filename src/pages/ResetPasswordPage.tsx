@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { FiArrowLeft, FiLock } from 'react-icons/fi';
 import { Alert, Button } from '../components/ui';
 import { authService } from '../services';
+import { useAuthStore } from '../store/authStore';
+import { getErrorMessage } from '../utils';
 
 export const ResetPasswordPage: React.FC = () => {
+  const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
   const [searchParams] = useSearchParams();
   const { token: routeToken } = useParams();
   const token = routeToken || searchParams.get('token') || '';
@@ -13,6 +17,13 @@ export const ResetPasswordPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const redirectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (redirectTimeout.current) {
+      clearTimeout(redirectTimeout.current);
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -38,12 +49,12 @@ export const ResetPasswordPage: React.FC = () => {
       setSuccess(response.message);
       setPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-        err.message ||
-        'No se pudo restablecer la contraseña'
-      );
+      redirectTimeout.current = setTimeout(() => {
+        logout();
+        navigate('/login?passwordReset=success', { replace: true });
+      }, 1800);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'No se pudo restablecer la contraseña'));
     } finally {
       setIsLoading(false);
     }
@@ -70,7 +81,7 @@ export const ResetPasswordPage: React.FC = () => {
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Nueva contraseña"
             autoComplete="new-password"
-            disabled={isLoading}
+            disabled={isLoading || Boolean(success)}
             className="w-full bg-white/10 border-2 border-white/20 focus:border-blue-400 focus:outline-none px-4 py-3 rounded-xl text-white placeholder:text-blue-200/50"
           />
           <input
@@ -79,10 +90,10 @@ export const ResetPasswordPage: React.FC = () => {
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder="Confirmar contraseña"
             autoComplete="new-password"
-            disabled={isLoading}
+            disabled={isLoading || Boolean(success)}
             className="w-full bg-white/10 border-2 border-white/20 focus:border-blue-400 focus:outline-none px-4 py-3 rounded-xl text-white placeholder:text-blue-200/50"
           />
-          <Button type="submit" isLoading={isLoading} disabled={!token || isLoading} className="w-full py-3">
+          <Button type="submit" isLoading={isLoading} disabled={!token || isLoading || Boolean(success)} className="w-full py-3">
             Restablecer contraseña
           </Button>
         </form>

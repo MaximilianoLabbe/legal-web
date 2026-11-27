@@ -26,6 +26,7 @@ A modern, professional desktop web application for managing legal cases and clie
 #### Admin Panel
 - **User Management**: Create and manage system users
 - **Access Control**: Set user roles and permissions
+- **Contracts & Payments**: Manage client contracts, installments, due dates, and payment records (admin only)
 - **System Administration**: Configure system settings
 
 ### 🎨 Design
@@ -237,6 +238,14 @@ The application connects to the backend API with the following endpoints:
 - `GET /api/users/{id}` - Get user details
 - `PUT /api/users/{id}` - Update user
 - `DELETE /api/users/{id}` - Delete user
+
+### Contracts & Payments (Admin Only)
+- `GET /api/admin/contracts` - List contracts and installments
+- `POST /api/admin/contracts` - Create a contract and its installment schedule
+- `PATCH /api/admin/contracts/{id}` - Update contract details and status
+- `POST /api/admin/contracts/{id}/installments/{installmentId}/payments` - Record an installment payment
+
+See [CONTRACTS_PAYMENTS_API.md](./CONTRACTS_PAYMENTS_API.md) for request/response formats and backend authorization requirements.
 
 ## 🎨 UI Components
 

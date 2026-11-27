@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { isAdminRole } from '../../utils/roles';
 import {
   FiHome,
   FiUsers,
   FiFileText,
   FiCheckSquare,
+  FiDollarSign,
   FiSettings,
   FiLogOut,
   FiMenu,
@@ -18,6 +20,7 @@ const navItems = [
   { path: '/cases', icon: FiFileText, label: 'Casos' },
   { path: '/tasks', icon: FiCheckSquare, label: 'Tareas' },
   { path: '/admin/users', icon: FiSettings, label: 'Administración', adminOnly: true },
+  { path: '/admin/contracts', icon: FiDollarSign, label: 'Contratos y pagos', adminOnly: true },
 ];
 
 export const Sidebar: React.FC = () => {
@@ -31,7 +34,7 @@ export const Sidebar: React.FC = () => {
   };
 
   const filteredItems = navItems.filter(
-    (item) => !item.adminOnly || user?.role === 'admin'
+    (item) => !item.adminOnly || isAdminRole(user?.role)
   );
 
   return (
@@ -93,7 +96,7 @@ export const Sidebar: React.FC = () => {
             <p className="text-sm text-gray-400">Conectado como</p>
             <p className="text-sm font-medium text-white truncate">{user?.firstName} {user?.lastName}</p>
             <p className="text-xs text-gray-400 mt-1">
-              {user?.role === 'admin' ? 'Administrador' : 'Abogado'}
+              {isAdminRole(user?.role) ? 'Administrador' : 'Abogado'}
             </p>
           </div>
           <button

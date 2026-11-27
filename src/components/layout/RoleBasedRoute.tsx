@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { isAdminRole } from '../../utils/roles';
 import type { UserRole } from '../../types';
 
 interface RoleBasedRouteProps {
@@ -29,7 +30,9 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
 
   // Verificar si el usuario tiene el rol requerido
   const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-  const hasRequiredRole = requiredRoles.includes(user.role);
+  const hasRequiredRole = requiredRoles.some((role) =>
+    role === 'admin' ? isAdminRole(user.role) : role === user.role
+  );
 
   if (!hasRequiredRole) {
     // Redirigir a la ruta alternativa si no tiene permisos

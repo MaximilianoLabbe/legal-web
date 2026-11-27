@@ -1,5 +1,5 @@
 import api from './api';
-import type { Client, ClientStats } from '../types';
+import type { ApiResponse, Client, ClientStats } from '../types';
 
 // Demo data for testing without backend
 const DEMO_CLIENTS: Client[] = [
@@ -92,11 +92,20 @@ export const clientService = {
     }
   },
 
+  getAllClientsStrict: async (): Promise<Client[]> => {
+    const response = await api.get<Client[] | ApiResponse<Client[]>>('/clients');
+    const clients = Array.isArray(response.data) ? response.data : response.data.data;
+
+    if (!Array.isArray(clients)) {
+      throw new Error('Respuesta inválida al cargar los clientes');
+    }
+
+    return clients;
+  },
+
   getAllClients: async (): Promise<Client[]> => {
     try {
-      const response = await api.get<any>('/clients');
-      // Handle wrapped response from backend
-      const clients = Array.isArray(response.data) ? response.data : response.data.data || [];
+      const clients = await clientService.getAllClientsStrict();
       // If no clients found, use demo data
       return clients.length > 0 ? clients : DEMO_CLIENTS;
     } catch (error: any) {

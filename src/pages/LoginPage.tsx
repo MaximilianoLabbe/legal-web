@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Button, Alert } from '../components/ui';
 import { validateEmail } from '../utils';
@@ -7,6 +7,7 @@ import { FiMail, FiLock, FiArrowRight } from 'react-icons/fi';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, isLoading, error: authError, user, token } = useAuthStore();
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
@@ -136,6 +137,15 @@ export const LoginPage: React.FC = () => {
                 type="error"
                 title="Error"
                 message={authError}
+              />
+            </div>
+          )}
+          {searchParams.get('passwordReset') === 'success' && (
+            <div className="mb-6 animate-slideInDown">
+              <Alert
+                type="success"
+                title="Contraseña actualizada"
+                message="Ya puedes iniciar sesión con tu nueva contraseña."
               />
             </div>
           )}
