@@ -3,6 +3,8 @@ import { useAuthStore } from './store/authStore';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { ClientDetailsPage } from './pages/ClientDetailsPage';
@@ -31,6 +33,9 @@ function App() {
           path="/login"
           element={token ? <Navigate to="/dashboard" replace /> : <LoginPage />}
         />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
         {/* Protected Routes */}
         <Route

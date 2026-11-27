@@ -12,6 +12,39 @@ const DEMO_CREDENTIALS = {
 };
 
 export const authService = {
+  requestPasswordReset: async (email: string): Promise<{ message: string }> => {
+    if (!email) {
+      throw new Error('El email es requerido');
+    }
+
+    const response = await api.post<any>('/auth/forgot-password', { email });
+    return {
+      message:
+        response.data?.message ||
+        'Si el correo está registrado, recibirás instrucciones para restablecer tu contraseña.',
+    };
+  },
+
+  resetPassword: async (
+    token: string,
+    password: string
+  ): Promise<{ message: string }> => {
+    if (!token) {
+      throw new Error('El enlace de recuperación no es válido');
+    }
+    if (!password || password.length < 6) {
+      throw new Error('La contraseña debe tener al menos 6 caracteres');
+    }
+
+    const response = await api.post<any>('/auth/reset-password', {
+      token,
+      password,
+    });
+    return {
+      message: response.data?.message || 'Contraseña restablecida exitosamente.',
+    };
+  },
+
   login: async (email: string, password: string): Promise<AuthResponse> => {
     // Validate inputs
     if (!email || !password) {

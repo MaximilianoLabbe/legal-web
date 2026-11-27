@@ -3,6 +3,8 @@ export const API_TIMEOUT = import.meta.env.VITE_API_TIMEOUT || 30000;
 
 export const ROUTES = {
   LOGIN: '/login',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password',
   DASHBOARD: '/dashboard',
   CLIENTS: '/clients',
   CLIENTS_CREATE: '/clients/create',

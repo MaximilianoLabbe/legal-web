@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { Button, Alert } from '../components/ui';
 import { validateEmail } from '../utils';
@@ -200,6 +200,14 @@ export const LoginPage: React.FC = () => {
                   {errors.password}
                 </p>
               )}
+              <div className="mt-2 text-right">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-blue-200 hover:text-white transition-colors"
+                >
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
             </div>
 
             {/* Submit Button */}
